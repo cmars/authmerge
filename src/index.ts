@@ -1,1 +1,2 @@
-export {OpMatcher, objectIDsToPaths} from './object_paths';
+export {OpMatcher} from './object_paths';
+export {Authorizer} from './auth';

@@ -30,4 +30,12 @@ describe('auth', () => {
     ]);
     expect(auther.check(decodedChange)).toEqual(true);
   });
+  // TODO: actor wildcard
+  // TODO: one of many actors match
+  // TODO: action wildcard
+  // TODO: one of many actions match
+  // TODO: target root
+  // TODO: actor doesn't match
+  // TODO: action doesn't match
+  // TODO: target doesn't match
 });
