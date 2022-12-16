@@ -3,6 +3,8 @@ import {Op} from '@automerge/automerge-wasm';
 
 type ObjectIDToPathMap = {[objectID: string]: string};
 
+export const Root = '';
+
 export class OpMatcher<T> {
   private pathMap: ObjectIDToPathMap;
 
@@ -11,6 +13,9 @@ export class OpMatcher<T> {
   }
 
   public match(op: Op, expr: string): boolean {
+    if (expr === Root) {
+      return true;
+    }
     const objPath = this.pathMap[op.obj];
     const targetPath = (objPath ? objPath.split('.') : []).concat([op.key]);
     return expr.split('.').every((item, i) => item === targetPath[i]);

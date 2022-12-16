@@ -1,6 +1,6 @@
 import * as automerge from '@automerge/automerge';
 
-import {OpMatcher} from '.';
+import {OpMatcher, Root} from '.';
 
 describe('object path mapping', () => {
   it('can identify a nested object set target', () => {
@@ -29,7 +29,7 @@ describe('object path mapping', () => {
     expect(
       matcher.match(decodedChange.ops[0], 'nestedObject.subObject')
     ).toEqual(true);
-    expect(matcher.match(decodedChange.ops[0], '')).toEqual(false);
+    expect(matcher.match(decodedChange.ops[0], Root)).toEqual(true);
     expect(matcher.match(decodedChange.ops[0], 'nested')).toEqual(false);
     expect(matcher.match(decodedChange.ops[0], 'nestedObject.sub')).toEqual(
       false
@@ -80,5 +80,26 @@ describe('object path mapping', () => {
     expect(decodedChange.ops).toHaveLength(1);
     expect(decodedChange.ops[0].action).toEqual('del');
     expect(matcher.match(decodedChange.ops[0], 'someThing')).toEqual(true);
+  });
+
+  it('can identify root target', () => {
+    const orig = automerge.from(
+      {
+        someThing: 'thing',
+      },
+      '9021'
+    );
+
+    const matcher = new OpMatcher(orig);
+
+    const changed = automerge.change(orig, doc => {
+      delete (doc as any).someThing;
+    });
+    const changes = automerge.getChanges(orig, changed);
+    expect(changes).toHaveLength(1);
+    const decodedChange = automerge.decodeChange(changes[0]);
+    expect(decodedChange.ops).toHaveLength(1);
+    expect(decodedChange.ops[0].action).toEqual('del');
+    expect(matcher.match(decodedChange.ops[0], Root)).toEqual(true);
   });
 });
