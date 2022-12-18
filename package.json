@@ -11,7 +11,8 @@
     "fix": "gts fix",
     "prepare": "npm run compile",
     "pretest": "npm run compile",
-    "posttest": "npm run lint"
+    "posttest": "npm run lint",
+    "compile:examples": "find ./examples -name \\*.rego -exec ./scripts/rego2wasm.bash {} \\;"
   },
   "author": "Casey Marshall <me@cmars.tech>",
   "license": "MIT",
@@ -21,10 +22,12 @@
     "gts": "^3.1.1",
     "jest": "^29.3.1",
     "ts-jest": "^29.0.3",
+    "ts-node": "^10.9.1",
     "typescript": "^4.9.4"
   },
   "dependencies": {
     "@automerge/automerge": "^2.0.0",
-    "@automerge/automerge-wasm": "^0.1.19"
+    "@automerge/automerge-wasm": "^0.1.19",
+    "@open-policy-agent/opa-wasm": "^1.8.0"
   }
 }

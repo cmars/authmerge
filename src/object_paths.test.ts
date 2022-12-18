@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as automerge from '@automerge/automerge';
 
 import {OpMatcher, Root} from '.';
