@@ -69,6 +69,6 @@ On NixOS, use `nix-shell` to install development dependencies. On others, instal
 
 # TODOs
 
-TODO: a more serious example application using authmerge
-TODO: rust port
-TODO: policy-enforcing rendezvous server (probably rust)
+- TODO: a more serious example application using authmerge
+- TODO: rust port
+- TODO: policy-enforcing rendezvous server (probably rust)
