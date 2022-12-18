@@ -35,6 +35,8 @@ What's potentially interesting and groundbreaking is defining such policy for lo
 
 # Related technologies
 
+Authmerge is designed for applications in which application content is open and pseudonymous, and a broad spectrum of trust may exist among its users. A compare and contrast with some trust-related, authorization-adjacent systems.
+
 ## Public-key encryption
 
 The OpenPGP web-of-trust is as an example of bootstrapping trust through policy -- users vouching for users to be who they say they are. If everyone had a public-key identity, public key attestation of application content changes would be quite powerful. In some communities, it might make sense to augment application changes with such attestation. It should be optional though; any application that depends entirely upon public key identities digs a significant technical moat around itself.
@@ -42,10 +44,6 @@ The OpenPGP web-of-trust is as an example of bootstrapping trust through policy 
 Persistent public key identities force key management responsibilities onto the users, and might distort social expectations of privacy in casual applications.
 
 Ultimately, public key identities solve authentication, not authorization. So they're an interesting add-on, but not a substitute for a policy system like authmerge.
-
-# Alternative technologies
-
-Authmerge is designed for applications in which application content is open and pseudonymous, and a broad spectrum of trust may exist among its users.
 
 ## Zero-knowledge proofs
 
@@ -69,6 +67,7 @@ On NixOS, use `nix-shell` to install development dependencies. On others, instal
 
 # TODOs
 
+- TODO: how to authmerge
 - TODO: a more serious example application using authmerge
 - TODO: rust port
 - TODO: policy-enforcing rendezvous server (probably rust)
