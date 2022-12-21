@@ -1,7 +1,27 @@
 <script lang="ts">
-import HelloWorld from './components/HelloWorld.vue';
+import * as automerge from '@automerge/automerge';
+import {markRaw} from 'vue';
+import * as localforage from 'localforage';
+
 import AddWish from './components/AddWish.vue';
 import Giftpool from './components/Giftpool.vue';
+import {GiftPlan} from './types';
+
+/**
+ * AppState represents the local application state.
+ */
+interface AppState {
+  // giftplan contains the actual automerge document. It must be marked as raw
+  // in Vue 3, otherwise the reactivity throws exceptions on internal automerge
+  // symbol properties.
+  // See https://github.com/vuejs/core/issues/3024 for details.
+  giftplan: automerge.Doc<GiftPlan>;
+
+  // localChanges counts the number of local changes made in the browser. It's
+  // used purely as a surrogate for reacting to changes in the automerge
+  // document, which doesn't play nice with Vue 3 reactivity.
+  localChanges: number;
+}
 
 export default {
   name: 'giftpool',
@@ -9,36 +29,37 @@ export default {
     Giftpool,
     AddWish,
   },
-  data() {
+  data(): AppState {
     return {
-      wishlist: [
-        {
-          id: 0,
-          title: 'Red Ryder BB Gun',
-        },
-        {
-          id: 1,
-          title: 'Football',
-        },
-      ],
+      localChanges: 0,
+      giftplan: markRaw(
+        automerge.from({
+          wishlist: [],
+          messages: [],
+        })
+      ),
     };
   },
-  mounted(){
-    const maybeWishlistJSON = localStorage.getItem('wishlist');
-    if (maybeWishlistJSON) {
-      this.wishlist = JSON.parse(maybeWishlistJSON);
+  async mounted() {
+    const bin: Uint8Array | null = await localforage.getItem('giftplan');
+    if (bin) {
+      this.giftplan = markRaw(automerge.load(bin));
     }
   },
   methods: {
     addWishMethod(newWish: any) {
-      this.wishlist = [...this.wishlist, newWish];
+      this.giftplan = markRaw(
+        automerge.change(this.giftplan, doc => {
+          doc.wishlist.push(newWish);
+        })
+      );
+      this.localChanges++;
     },
   },
   watch: {
-    wishlist: {
+    revision: {
       handler() {
-        console.log('wishlist changed!');
-        localStorage.setItem('wishlist', JSON.stringify(this.wishlist));
+        localforage.setItem('giftplan', automerge.save(this.giftplan));
       },
     },
   },
@@ -52,7 +73,7 @@ export default {
     </a>
     <h1>My Gift Wishlist</h1>
     <AddWish v-on:add-wish-event="addWishMethod" />
-    <Giftpool v-bind:wishlist="wishlist" />
+    <Giftpool v-bind:wishlist="giftplan.wishlist" />
   </div>
 </template>
 
