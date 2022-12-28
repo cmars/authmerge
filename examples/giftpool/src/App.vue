@@ -6,6 +6,7 @@ import * as localforage from 'localforage';
 import AddWish from './components/AddWish.vue';
 import Giftpool from './components/Giftpool.vue';
 import {GiftPlan} from './types';
+import {v4} from 'uuid';
 
 /**
  * AppState represents the local application state.
@@ -21,6 +22,8 @@ interface AppState {
   // used purely as a surrogate for reacting to changes in the automerge
   // document, which doesn't play nice with Vue 3 reactivity.
   localChanges: number;
+
+  actorId: string;
 }
 
 export default {
@@ -32,6 +35,7 @@ export default {
   data(): AppState {
     return {
       localChanges: 0,
+      actorId: v4(),
       giftplan: markRaw(
         automerge.from({
           wishlist: [],
@@ -44,6 +48,14 @@ export default {
     const bin: Uint8Array | null = await localforage.getItem('giftplan');
     if (bin) {
       this.giftplan = markRaw(automerge.load(bin));
+    }
+
+    const actorId: string | null = await localforage.getItem('actorId');
+    if (actorId) {
+      this.actorId = actorId;
+    } else {
+      this.actorId = v4();
+      await localforage.setItem('actorId', this.actorId);
     }
   },
   methods: {
