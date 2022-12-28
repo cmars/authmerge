@@ -1,0 +1,340 @@
+openapi: 3.0.0
+info:
+  title: Rendezvous API
+  version: v1alpha
+  description: Rendezvous API for collaborating on local-first document objects
+  contact:
+    name: Casey Marshall
+    email: me@cmars.tech
+servers:
+  - url: 'https://ringspace.cmars.tech/api'
+  - url: 'https://ringspace.local/api'
+
+paths:
+  /docs:
+    post:
+      operationId: createDoc
+      summary: Start a new document collaboration
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/CreateDocRequest'
+      responses:
+        '201':
+          description: The document collaboration was created successfully
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/CreateDocResponse'
+        '400':
+          description: There was a problem with the request
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    # TODO: create a GET for this? probably just returns metadata, as the
+    # rendezvous isn't in the business of maintaining the document itself, just
+    # propagating changes
+
+  /docs/{doc_id}/changes:
+    post:
+      operationId: appendDocChanges
+      summary: Append document changes
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream: {}
+      responses:
+        '204':
+          description: The requested document changes were accepted
+        '400':
+          description: There was a problem with the request
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The requested collaborative document could not be found
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      operationId: getDocChanges
+      summary: Get document changes
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ResourceId'
+        - name: offset
+          in: query
+          required: true
+          schema:
+            type: number
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: The requested document changes
+          content:
+            application/octet-stream: {}
+        '400':
+          description: There was a problem with the request
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: The requested collaborative document could not be found
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /docs/{doc_id}/invites:
+    post:
+      operationId: createDocInvite
+      summary: Create a new invite for a document collaboration
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ResourceId'
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/CreateInviteRequest'
+      responses:
+        '201':
+          description: The invite was created successfully
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/CreateInviteResponse'
+
+  /docs/{doc_id}/invites/{invite_id}:
+    put:
+      operationId: consumeDocInvite
+      summary: Consume an invite to collaborate on a document
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ResourceId'
+        - name: invite_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ResourceId'
+        - name: nonce
+          in: query
+          required: true
+          schema:
+            type: string
+            format: byte
+      responses:
+        '200':
+          description: The invite was consumed; response contains authentication information to participate further
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/ConsumeInviteResponse'
+
+
+components:
+  schemas:
+
+    # Base types
+    ResourceId:
+      type: string
+      format: uuid
+    SelfLinks:
+      type: object
+      required: [self]
+      properties:
+        self:
+          $ref: '#/components/schemas/Link'
+    Link:
+      type: string
+      format: uri
+
+    # Creating document collaborations
+    CreateDocRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CreateDocRequestData'
+    CreateDocRequestData:
+      type: object
+      required: [type, attributes]
+      properties:
+        type:
+          type: string
+          enum: ['docs']
+        attributes:
+          type: object
+          required: [actor_id, changes]
+          properties:
+            actor_id:
+              $ref: '#/components/schemas/ResourceId'
+            changes:
+              type: array
+              items:
+                type: string
+                format: byte
+    CreateDocResponse:
+      type: object
+      required: [data, links]
+      properties:
+        data:
+          $ref: '#/components/schemas/CreateDocResponseData'
+        links:
+          $ref: '#/components/schemas/SelfLinks'
+    CreateDocResponseData:
+      type: object
+      required: [type, id, attributes]
+      properties:
+        id:
+          $ref: '#/components/schemas/ResourceId'
+        type:
+          type: string
+          enum: ['docs']
+        attributes:
+          type: object
+          required:
+            - token
+          properties:
+            actor_id:
+              $ref: '#/components/schemas/ResourceId'
+            token:
+              type: string
+              format: byte
+          
+    CreateInviteRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CreateInviteRequestData'
+    CreateInviteRequestData:
+      type: object
+      required: [type, attributes]
+      properties:
+        type:
+          type: string
+          enum: ['invites']
+        attributes:
+          $ref: '#/components/schemas/CreateInviteRequestAttributes'
+    CreateInviteRequestAttributes:
+      type: object
+      required: [roles]
+      properties:
+        note:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+    CreateInviteResponse:
+      type: object
+      required: [data, links]
+      properties:
+        data:
+          $ref: '#/components/schemas/CreateInviteResponseData'
+        links:
+          allOf:
+            - type: object
+              required: [consume]
+              properties:
+                consume:
+                  type: string
+                  format: uri
+    CreateInviteResponseData:
+      type: object
+      required: [id, type, attributes]
+      properties:
+        id:
+          $ref: '#/components/schemas/ResourceId'
+        type:
+          type: string
+          enum: ['invites']
+        attributes:
+          $ref: '#/components/schemas/CreateInviteResponseAttributes'
+    CreateInviteResponseAttributes:
+      type: object
+      required: [roles]
+      properties:
+        note:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        uses:
+          type: number
+
+    ConsumeInviteResponse:
+      type: object
+      required: [data, links]
+      properties:
+        data:
+          $ref: '#/components/schemas/ConsumeInviteResponseData'
+        links:
+          type: object
+          required: [changes]
+          properties:
+            changes:
+              type: string
+              format: uri
+    ConsumeInviteResponseData:
+      type: object
+      required: [id, type, attributes]
+      properties:
+        id:
+          $ref: '#/components/schemas/ResourceId'
+        type:
+          type: string
+          enum: ['invites']
+
+    ErrorResponse:
+      type: object
+      required:
+        - errors
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+              - status
+              - title
+              - detail
+            properties:
+              status:
+                type: string
+              title:
+                type: string
+              detail:
+                type: string
+              source:
+                type: object
+                properties:
+                  pointer:
+                    type: string
+                  parameter:
+                    type: string
