@@ -1,2 +1,4 @@
-build/
+/build/
+/examples/*/build/
+/examples/*/dist/
 vite.config.ts
