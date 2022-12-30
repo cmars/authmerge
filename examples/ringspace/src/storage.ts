@@ -19,7 +19,7 @@ export interface Storage {
 }
 
 export class SqliteStorage implements Storage {
-  private db: Knex;
+  db: Knex;
 
   // TODO: use env var for dbfile
   constructor(dbfile = path.join(__dirname, '..', 'ringspace.db')) {
@@ -83,7 +83,7 @@ export class SqliteStorage implements Storage {
     });
     await this.db.transaction(async tx => {
       await tx('docs').insert(docRow);
-      await tx('actor').insert(actorRow);
+      await tx('actors').insert(actorRow);
       await tx('changes').insert(changeRows);
     });
     return {
@@ -122,5 +122,9 @@ export class SqliteStorage implements Storage {
         // What do we want to say about a doc?
       });
     }
+  }
+
+  public async close(): Promise<void> {
+    await this.db.destroy();
   }
 }

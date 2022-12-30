@@ -2,9 +2,10 @@
   "name": "authmerge",
   "version": "0.0.1",
   "description": "Authorization for Automerge",
-  "main": "index.js",
+  "main": "build/index.js",
   "scripts": {
     "test": "jest",
+    "test:examples:ringspace": "(cd examples/ringspace; npm test)",
     "lint": "gts lint",
     "clean": "gts clean",
     "compile": "tsc",

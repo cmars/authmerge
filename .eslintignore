@@ -1,5 +1,3 @@
-/build/
-/examples/*/build/
-/examples/*/dist/
-/examples/ringspace/src/types.d.ts
-vite.config.ts
+**/build/
+**/dist/
+/examples/

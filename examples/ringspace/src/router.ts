@@ -10,6 +10,7 @@ import {
 
 export const router = (controller: Controller): express.IRouter => {
   const r = express.Router();
+  r.use(express.json());
   r.use(
     async (
       req: express.Request,
