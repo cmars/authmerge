@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as http from 'http';
 
 /* eslint-disable node/no-unpublished-import */
@@ -90,5 +91,42 @@ describe('append changes', () => {
       })
       .expect(200);
     expect(appendResp.body.meta?.changes_added).toEqual(1);
+  });
+
+  it('responds 401 when missing authorization', async () => {
+    const newDoc = automerge.change(doc, (modifyDoc: any) => {
+      modifyDoc.hello = 'world';
+    });
+    const changes = automerge.getChanges(doc, newDoc);
+    await supertest(app)
+      .post(`/docs/${doc_id}/changes`)
+      .send({
+        data: {
+          type: 'changes',
+          attributes: {
+            changes: changes.map(ch => Buffer.of(...ch).toString('base64')),
+          },
+        },
+      })
+      .expect(401);
+  });
+
+  it('responds 403 when authorization invalid', async () => {
+    const newDoc = automerge.change(doc, (modifyDoc: any) => {
+      modifyDoc.hello = 'world';
+    });
+    const changes = automerge.getChanges(doc, newDoc);
+    await supertest(app)
+      .post(`/docs/${doc_id}/changes`)
+      .set({authorization: 'Bearer nope'})
+      .send({
+        data: {
+          type: 'changes',
+          attributes: {
+            changes: changes.map(ch => Buffer.of(...ch).toString('base64')),
+          },
+        },
+      })
+      .expect(403);
   });
 });

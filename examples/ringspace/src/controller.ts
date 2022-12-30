@@ -1,7 +1,7 @@
 import * as express from 'express';
 import {Context} from './context';
 import {Storage} from './storage';
-import {ForbiddenError, BadRequestError} from './errors';
+import {ForbiddenError, BadRequestError, ServerError} from './errors';
 
 export const bearerTokenRegex = /^Bearer\s+(.+)/;
 
@@ -31,9 +31,15 @@ export class Controller {
       const actorId = await this.storage.getActorIdForToken(authToken);
       if (actorId) {
         result.actor_id = actorId;
+      } else {
+        throw new ForbiddenError();
       }
     } catch (err) {
-      throw new ForbiddenError();
+      if (err instanceof ForbiddenError) {
+        throw err;
+      }
+      console.log(err);
+      throw new ServerError();
     }
     return result;
   }
