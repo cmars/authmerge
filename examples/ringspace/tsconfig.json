@@ -5,7 +5,8 @@
     "outDir": "./build",
     "lib": ["ESNext", "DOM"],
     "target": "esnext",
-    "module": "CommonJS"
+    "module": "CommonJS",
+    "typeRoots": ["./src/types", "./node_modules/@types"]
   },
   "include": [
     "src/**/*.ts",

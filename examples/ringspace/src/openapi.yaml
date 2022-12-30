@@ -51,10 +51,16 @@ paths:
       requestBody:
         required: true
         content:
-          application/octet-stream: {}
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/AppendDocChangesRequest'
       responses:
-        '204':
+        '200':
           description: The requested document changes were accepted
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/AppendDocChangesResponse'
         '400':
           description: There was a problem with the request
           content:
@@ -171,6 +177,9 @@ components:
     Link:
       type: string
       format: uri
+    ActorId:
+      type: string
+      format: uuid
 
     # Creating document collaborations
     CreateDocRequest:
@@ -191,7 +200,7 @@ components:
           required: [actor_id, changes]
           properties:
             actor_id:
-              $ref: '#/components/schemas/ResourceId'
+              $ref: '#/components/schemas/ActorId'
             changes:
               type: array
               items:
@@ -220,11 +229,48 @@ components:
             - token
           properties:
             actor_id:
-              $ref: '#/components/schemas/ResourceId'
+              $ref: '#/components/schemas/ActorId'
             token:
               type: string
               format: byte
-          
+
+    AppendDocChangesRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/AppendDocChangesRequestData'
+    AppendDocChangesRequestData:
+      type: object
+      required: [type, attributes]
+      properties:
+        type:
+          type: string
+          enum: ['changes']
+        attributes:
+          $ref: '#/components/schemas/AppendDocChangesAttributes'
+    AppendDocChangesAttributes:
+      type: object
+      required: [changes]
+      properties:
+        changes:
+          type: array
+          items:
+            type: string
+            format: byte
+    AppendDocChangesResponse:
+      type: object
+      required: [meta]
+      properties:
+        meta:
+          $ref: '#/components/schemas/AppendDocChangesResponseMeta'
+    AppendDocChangesResponseMeta:
+      type: object
+      properties:
+        changes_added:
+          type: number
+          minimum: 0
+
     CreateInviteRequest:
       type: object
       required: [data]
@@ -319,22 +365,23 @@ components:
         errors:
           type: array
           items:
-            type: object
-            required:
-              - status
-              - title
-              - detail
-            properties:
-              status:
-                type: string
-              title:
-                type: string
-              detail:
-                type: string
-              source:
-                type: object
-                properties:
-                  pointer:
-                    type: string
-                  parameter:
-                    type: string
+            $ref: '#/components/schemas/Error'
+    Error:
+      type: object
+      required:
+        - status
+        - title
+      properties:
+        status:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+            parameter:
+              type: string
