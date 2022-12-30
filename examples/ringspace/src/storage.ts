@@ -28,6 +28,7 @@ export class SqliteStorage implements Storage {
       connection: {
         filename: dbfile,
       },
+      useNullAsDefault: true,
     });
     this.db = db;
   }
@@ -79,6 +80,7 @@ export class SqliteStorage implements Storage {
         doc_id: docRow.doc_id,
         actor_id: actorRow.actor_id,
         change: buf,
+        created_at: new Date().toISOString(),
       };
     });
     await this.db.transaction(async tx => {

@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jest",
     "test:examples:ringspace": "(cd examples/ringspace; npm test)",
+    "test:all": "for script in test test:examples:ringspace; do npm run $script; done",
     "lint": "gts lint",
     "clean": "gts clean",
     "compile": "tsc",

@@ -8,64 +8,83 @@ import {
   UnauthorizedError,
 } from './errors';
 
+const requireAuth = async (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  if (!req.context.actor_id) {
+    next(new UnauthorizedError());
+  } else {
+    next();
+  }
+};
+
 export const router = (controller: Controller): express.IRouter => {
   const r = express.Router();
   r.use(express.json());
+
+  // Enrich request with context.
   r.use(
     async (
       req: express.Request,
       res: express.Response,
       next: express.NextFunction
     ) => {
-      req.context = await controller.getContext(req);
-      next();
-    }
-  );
-
-  r.post('/docs', async (req: express.Request, res: express.Response) => {
-    const respBody = await controller.createDoc(
-      req.body as Components.Schemas.CreateDocRequest
-    );
-    res.status(201).send(respBody);
-  });
-
-  r.use(
-    async (
-      req: express.Request,
-      res: express.Response,
-      next: express.NextFunction
-    ) => {
-      if (!req.context.actor_id) {
-        throw new UnauthorizedError();
+      try {
+        req.context = await controller.getContext(req);
+        next();
+      } catch (err) {
+        next(err);
       }
-      next();
     }
   );
 
   r.post(
-    '/docs/:doc_id/changes',
-    async (req: express.Request, res: express.Response) => {
-      if (!req.context?.actor_id) {
-        throw new UnauthorizedError();
+    '/docs',
+    async (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      try {
+        const respBody = await controller.createDoc(
+          req.body as Components.Schemas.CreateDocRequest
+        );
+        res.status(201).send(respBody);
+      } catch (err) {
+        next(err);
       }
-      const respBody = await controller.appendChanges(
-        {
-          ...req.context,
-          actor_id: req.context.actor_id!,
-        },
-        req.body as Components.Schemas.AppendDocChangesRequest
-      );
-      res.status(201).send(respBody);
     }
   );
 
-  r.get('/', (req: express.Request, res: express.Response) => {
-    res.send('hello world');
-  });
+  r.post('/docs/:doc_id/changes', [
+    requireAuth,
+    async (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      try {
+        if (!req.context?.actor_id) {
+          throw new UnauthorizedError();
+        }
+        const respBody = await controller.appendChanges(
+          {
+            ...req.context,
+            actor_id: req.context.actor_id!,
+          },
+          req.body as Components.Schemas.AppendDocChangesRequest
+        );
+        res.status(200).send(respBody);
+      } catch (err) {
+        next(err);
+      }
+    },
+  ]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   r.use((req, res, next) => {
-    throw new NotFoundError();
+    next(new NotFoundError());
   });
 
   r.use(

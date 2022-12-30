@@ -1,7 +1,7 @@
 import * as http from 'http';
 
-/* eslint-disable node/no-unpublished-import */
 import * as express from 'express';
+/* eslint-disable node/no-unpublished-import */
 import * as supertest from 'supertest';
 import {v4} from 'uuid';
 
@@ -24,7 +24,7 @@ describe('create doc collaboration', () => {
     const controller = new Controller(storage);
     const r = router(controller);
     app.use(r);
-    server = app.listen(6666);
+    server = app.listen(0);
   });
 
   afterEach(async () => {
@@ -49,7 +49,7 @@ describe('create doc collaboration', () => {
       .getAllChanges(newDoc)
       .map(arr => Buffer.of(...arr).toString('base64'));
 
-    await supertest(app)
+    const resp = await supertest(app)
       .post('/docs')
       .send({
         data: {
@@ -62,6 +62,49 @@ describe('create doc collaboration', () => {
       })
       .expect(201);
 
+    expect(resp.body.data?.id).toBeTruthy();
+    expect(resp.body.data?.attributes?.token).toBeTruthy();
+    expect(resp.body).toEqual(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: 'docs',
+          attributes: expect.objectContaining({
+            actor_id,
+          }),
+        }),
+      })
+    );
+
     expect(await storage.db('docs').count()).toEqual([{'count(*)': 1}]);
+  });
+
+  it('responds bad request for wrong resource type', async () => {
+    await supertest(app)
+      .post('/docs')
+      .send({
+        data: {
+          type: 'scod',
+          attributes: {
+            actor_id: v4(),
+            changes: [],
+          },
+        },
+      })
+      .expect(400);
+  });
+
+  it('responds not found for unsupported route', async () => {
+    await supertest(app)
+      .post('/scod')
+      .send({
+        data: {
+          type: 'scod',
+          attributes: {
+            actor_id: v4(),
+            changes: [],
+          },
+        },
+      })
+      .expect(404);
   });
 });
