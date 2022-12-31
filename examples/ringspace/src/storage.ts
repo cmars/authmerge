@@ -16,6 +16,18 @@ export interface Storage {
     actor_id: string;
     changes: Buffer[];
   }): Promise<{doc_id: string; actor_id: string; token: string}>;
+
+  createInvite(
+    doc_id: string,
+    actor_id: string,
+    roles: string[],
+    note?: string
+  ): Promise<{
+    id: string;
+    roles: string[];
+    note?: string;
+    uses: number;
+  }>;
 }
 
 export class SqliteStorage implements Storage {
@@ -95,33 +107,80 @@ export class SqliteStorage implements Storage {
     };
   }
 
+  public async createInvite(
+    doc_id: string,
+    actor_id: string,
+    roles: string[],
+    note?: string | undefined
+  ): Promise<{
+    id: string;
+    roles: string[];
+    note?: string | undefined;
+    uses: number;
+  }> {
+    const inviteRow = {
+      doc_id,
+      invite_id: v4(),
+      roles: JSON.stringify(roles),
+      note: note,
+      created_at: new Date().toISOString(),
+      created_by: actor_id,
+      uses: 0,
+    };
+    await this.db.transaction(async tx => {
+      await tx('invites').insert(inviteRow);
+    });
+    return {
+      id: inviteRow.invite_id,
+      roles: roles,
+      note: inviteRow.note,
+      uses: inviteRow.uses,
+    };
+  }
+
   public async init(): Promise<void> {
-    if (!(await this.db.schema.hasTable('changes'))) {
-      await this.db.schema.createTable('changes', table => {
-        table.primary(['doc_id', 'actor_id', 'offset']);
-        table.increments('offset');
-        table.uuid('doc_id');
-        table.uuid('actor_id');
-        table
-          .timestamp('created_at', {useTz: true})
-          .defaultTo(this.db.fn.now());
-        table.binary('change');
+    if (!(await this.db.schema.hasTable('docs'))) {
+      await this.db.schema.createTable('docs', table => {
+        table.primary(['doc_id']);
+        table.uuid('doc_id').notNullable();
+        // What do we want to say about a doc?
       });
     }
     if (!(await this.db.schema.hasTable('actors'))) {
       await this.db.schema.createTable('actors', table => {
         table.primary(['doc_id', 'actor_id']);
-        table.uuid('doc_id');
-        table.uuid('actor_id');
-        table.string('token');
-        table.json('roles');
+        table.uuid('doc_id').notNullable().references('docs.doc_id');
+        table.uuid('actor_id').notNullable();
+        table.string('token').notNullable();
+        table.json('roles').notNullable();
       });
     }
-    if (!(await this.db.schema.hasTable('docs'))) {
-      await this.db.schema.createTable('docs', table => {
-        table.primary(['doc_id']);
-        table.uuid('doc_id');
-        // What do we want to say about a doc?
+    if (!(await this.db.schema.hasTable('changes'))) {
+      await this.db.schema.createTable('changes', table => {
+        table.primary(['doc_id', 'actor_id', 'offset']);
+        table.increments('offset').notNullable();
+        table.uuid('doc_id').notNullable().references('docs.doc_id');
+        table.uuid('actor_id').notNullable().references('actors.actor_id');
+        table
+          .timestamp('created_at', {useTz: true})
+          .defaultTo(this.db.fn.now())
+          .notNullable();
+        table.binary('change').notNullable();
+      });
+    }
+    if (!(await this.db.schema.hasTable('invites'))) {
+      await this.db.schema.createTable('invites', table => {
+        table.primary(['doc_id', 'invite_id']);
+        table.uuid('doc_id').notNullable().references('docs.doc_id');
+        table.uuid('invite_id').notNullable();
+        table.json('roles').notNullable();
+        table.string('note').nullable();
+        table.tinyint('uses').notNullable();
+        table
+          .timestamp('created_at', {useTz: true})
+          .defaultTo(this.db.fn.now())
+          .notNullable();
+        table.uuid('created_by').notNullable().references('actors.actor_id');
       });
     }
   }

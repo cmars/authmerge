@@ -1,4 +1,4 @@
-openapi: 3.0.0
+openapi: 3.1.0
 info:
   title: Rendezvous API
   version: v1alpha
@@ -146,12 +146,6 @@ paths:
           required: true
           schema:
             $ref: '#/components/schemas/ResourceId'
-        - name: nonce
-          in: query
-          required: true
-          schema:
-            type: string
-            format: byte
       responses:
         '200':
           description: The invite was consumed; response contains authentication information to participate further

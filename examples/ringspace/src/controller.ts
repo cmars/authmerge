@@ -1,5 +1,5 @@
 import * as express from 'express';
-import {Context} from './context';
+import {AuthenticatedContext, Context} from './context';
 import {Storage} from './storage';
 import {ForbiddenError, BadRequestError, ServerError} from './errors';
 
@@ -14,6 +14,7 @@ export class Controller {
 
   public async getContext(req: express.Request): Promise<Context> {
     const result: Context = {
+      url: req.url,
       doc_id: req.params['doc_id'],
       invite_id: req.params['invite_id'],
     };
@@ -72,7 +73,7 @@ export class Controller {
   }
 
   public async appendChanges(
-    ctx: Omit<Context, 'actor_id'> & {actor_id: string},
+    ctx: AuthenticatedContext,
     body: Components.Schemas.AppendDocChangesRequest
   ): Promise<Components.Schemas.AppendDocChangesResponse> {
     const changesAdded = body.data.attributes.changes.length;
@@ -84,6 +85,32 @@ export class Controller {
     return {
       meta: {
         changes_added: changesAdded,
+      },
+    };
+  }
+
+  public async createInvite(
+    ctx: AuthenticatedContext,
+    body: Components.Schemas.CreateInviteRequest
+  ): Promise<Components.Schemas.CreateInviteResponse> {
+    const invite = await this.storage.createInvite(
+      ctx.doc_id,
+      ctx.actor_id,
+      body.data.attributes.roles,
+      body.data.attributes.note
+    );
+    return {
+      data: {
+        id: invite.id,
+        type: 'invites',
+        attributes: {
+          note: invite.note,
+          roles: invite.roles,
+          uses: invite.uses,
+        },
+      },
+      links: {
+        consume: `${ctx.url}/${invite.id}`,
       },
     };
   }
