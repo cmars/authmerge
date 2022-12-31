@@ -106,11 +106,39 @@ export class Controller {
         attributes: {
           note: invite.note,
           roles: invite.roles,
-          uses: invite.uses,
+          uses_remaining: invite.uses_remaining,
         },
       },
       links: {
         consume: `${ctx.url}/${invite.id}`,
+      },
+    };
+  }
+
+  public async consumeInvite(
+    ctx: Context,
+    invite_id: string,
+    new_actor_id: string | undefined
+  ): Promise<Components.Schemas.ConsumeInviteResponse> {
+    if (!new_actor_id) {
+      throw new BadRequestError();
+    }
+    const {token, uses_remaining} = await this.storage.consumeInvite(
+      ctx.doc_id,
+      invite_id,
+      new_actor_id
+    );
+    return {
+      data: {
+        id: invite_id,
+        type: 'invites',
+        attributes: {
+          token,
+          uses_remaining,
+        },
+      },
+      links: {
+        changes: `/docs/${ctx.doc_id}/changes`,
       },
     };
   }

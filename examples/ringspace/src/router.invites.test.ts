@@ -13,7 +13,7 @@ import {router} from './router';
 import {SqliteStorage} from './storage';
 import {toAutomerge} from './actors';
 
-describe('append changes', () => {
+describe('create invites', () => {
   let app: express.Application;
   let server: http.Server;
   let storage: SqliteStorage;
@@ -104,6 +104,40 @@ describe('append changes', () => {
         },
       })
     );
+  });
+
+  it('can accept an invite to collaborate on a doc', async () => {
+    const inviteResp: supertest.Response = await supertest(app)
+      .post(`/docs/${doc_id}/invites`)
+      .set({authorization: `Bearer ${adminToken}`})
+      .send({
+        data: {
+          type: 'invites',
+          attributes: {
+            note: 'join the party',
+            roles: ['writer'],
+          },
+        },
+      })
+      .expect(201);
+    const inviteLink = inviteResp.body.links?.consume;
+    expect(inviteLink).toBeTruthy();
+
+    // Consume invite, get a token
+    const consumeActorId = v4();
+    const consumeResp: supertest.Response = await supertest(app)
+      .delete(`${inviteLink}?actor_id=${consumeActorId}`)
+      .expect(200);
+    const {token, uses_remaining} = consumeResp.body.data?.attributes;
+    expect(token).toBeTruthy();
+    expect(uses_remaining).toEqual(0);
+    const changesLink = consumeResp.body.links?.changes;
+    expect(changesLink).toBeTruthy();
+
+    // Invite has been consumed
+    await supertest(app)
+      .delete(`${inviteLink}?actor_id=${consumeActorId}`)
+      .expect(404);
   });
 
   it('responds 401 when missing authorization', async () => {

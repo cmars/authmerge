@@ -132,7 +132,7 @@ paths:
                 $ref: '#/components/schemas/CreateInviteResponse'
 
   /docs/{doc_id}/invites/{invite_id}:
-    put:
+    delete:
       operationId: consumeDocInvite
       summary: Consume an invite to collaborate on a document
       parameters:
@@ -146,6 +146,11 @@ paths:
           required: true
           schema:
             $ref: '#/components/schemas/ResourceId'
+        - name: actor_id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ActorId'
       responses:
         '200':
           description: The invite was consumed; response contains authentication information to participate further
@@ -325,7 +330,7 @@ components:
           type: array
           items:
             type: string
-        uses:
+        uses_remaining:
           type: number
 
     ConsumeInviteResponse:
@@ -350,6 +355,18 @@ components:
         type:
           type: string
           enum: ['invites']
+        attributes:
+          $ref: '#/components/schemas/ConsumeInvitesResponseAttributes'
+    ConsumeInvitesResponseAttributes:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          format: byte
+        uses_remaining:
+          type: number
+          minimum: 1
 
     ErrorResponse:
       type: object

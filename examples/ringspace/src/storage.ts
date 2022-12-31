@@ -3,6 +3,8 @@ import * as path from 'path';
 import {knex, Knex} from 'knex';
 import {v4} from 'uuid';
 
+import {NotFoundError} from './errors';
+
 export interface Storage {
   getActorIdForToken(authToken: string): Promise<string | null>;
 
@@ -26,8 +28,14 @@ export interface Storage {
     id: string;
     roles: string[];
     note?: string;
-    uses: number;
+    uses_remaining: number;
   }>;
+
+  consumeInvite(
+    doc_id: string,
+    invite_id: string,
+    new_actor_id: string
+  ): Promise<{token: string; uses_remaining: number}>;
 }
 
 export class SqliteStorage implements Storage {
@@ -116,7 +124,7 @@ export class SqliteStorage implements Storage {
     id: string;
     roles: string[];
     note?: string | undefined;
-    uses: number;
+    uses_remaining: number;
   }> {
     const inviteRow = {
       doc_id,
@@ -125,7 +133,7 @@ export class SqliteStorage implements Storage {
       note: note,
       created_at: new Date().toISOString(),
       created_by: actor_id,
-      uses: 0,
+      uses_remaining: 1,
     };
     await this.db.transaction(async tx => {
       await tx('invites').insert(inviteRow);
@@ -134,8 +142,43 @@ export class SqliteStorage implements Storage {
       id: inviteRow.invite_id,
       roles: roles,
       note: inviteRow.note,
-      uses: inviteRow.uses,
+      uses_remaining: inviteRow.uses_remaining,
     };
+  }
+
+  public async consumeInvite(
+    doc_id: string,
+    invite_id: string,
+    new_actor_id: string
+  ): Promise<{token: string; uses_remaining: number}> {
+    return await this.db.transaction<{
+      token: string;
+      uses_remaining: number;
+    }>(async tx => {
+      const matchingInvite = await tx('invites')
+        .select('uses_remaining', 'roles')
+        .where({doc_id, invite_id})
+        .where('uses_remaining', '>', 0)
+        .first();
+      if (!matchingInvite) {
+        throw new NotFoundError();
+      }
+      const {uses_remaining, roles} = matchingInvite;
+      const update_uses_remaining = uses_remaining - 1;
+      await tx('invites')
+        .where({doc_id, invite_id})
+        .update({uses_remaining: update_uses_remaining});
+
+      const actorRow = {
+        doc_id,
+        actor_id: new_actor_id,
+        roles,
+        token: v4(),
+      };
+      await tx('actors').insert(actorRow);
+
+      return {token: actorRow.token, uses_remaining: update_uses_remaining};
+    });
   }
 
   public async init(): Promise<void> {
@@ -175,7 +218,7 @@ export class SqliteStorage implements Storage {
         table.uuid('invite_id').notNullable();
         table.json('roles').notNullable();
         table.string('note').nullable();
-        table.tinyint('uses').notNullable();
+        table.tinyint('uses_remaining').notNullable();
         table
           .timestamp('created_at', {useTz: true})
           .defaultTo(this.db.fn.now())

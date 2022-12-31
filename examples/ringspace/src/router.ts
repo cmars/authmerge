@@ -91,6 +91,26 @@ export const router = (controller: Controller): express.IRouter => {
     },
   ]);
 
+  r.delete('/docs/:doc_id/invites/:invite_id', [
+    reqContext(controller),
+    async (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      try {
+        const respBody = await controller.consumeInvite(
+          req.context,
+          req.params.invite_id,
+          req.query['actor_id']?.toString()
+        );
+        res.status(200).send(respBody);
+      } catch (err) {
+        next(err);
+      }
+    },
+  ]);
+
   r.post('/docs', [
     reqContext(controller),
     async (

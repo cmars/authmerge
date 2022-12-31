@@ -26,6 +26,11 @@ declare namespace Components {
         export interface ConsumeInviteResponseData {
             id: ResourceId /* uuid */;
             type: "invites";
+            attributes: ConsumeInvitesResponseAttributes;
+        }
+        export interface ConsumeInvitesResponseAttributes {
+            token: string; // byte
+            uses_remaining?: number;
         }
         export interface CreateDocRequest {
             data: CreateDocRequestData;
@@ -69,7 +74,7 @@ declare namespace Components {
         export interface CreateInviteResponseAttributes {
             note?: string;
             roles: string[];
-            uses?: number;
+            uses_remaining?: number;
         }
         export interface CreateInviteResponseData {
             id: ResourceId /* uuid */;
@@ -112,16 +117,16 @@ declare namespace Paths {
     }
     namespace ConsumeDocInvite {
         namespace Parameters {
+            export type ActorId = Components.Schemas.ActorId /* uuid */;
             export type DocId = Components.Schemas.ResourceId /* uuid */;
             export type InviteId = Components.Schemas.ResourceId /* uuid */;
-            export type Nonce = string; // byte
         }
         export interface PathParameters {
             doc_id: Parameters.DocId;
             invite_id: Parameters.InviteId;
         }
         export interface QueryParameters {
-            nonce: Parameters.Nonce /* byte */;
+            actor_id: Parameters.ActorId;
         }
         namespace Responses {
             export type $200 = Components.Schemas.ConsumeInviteResponse;
