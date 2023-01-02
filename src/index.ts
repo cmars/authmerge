@@ -1,2 +1,2 @@
 export {OpMatcher, Root} from './object_paths';
-export {Authorizer} from './auth';
+export {Authorizer, Policy} from './auth';
