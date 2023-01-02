@@ -64,6 +64,7 @@ describe('changes', () => {
     expect(createDocAttrs).toBeTruthy();
     expect(createDocResp.body.data.id).toBeTruthy();
     expect(createDocAttrs.token).toBeTruthy();
+    expect(createDocAttrs.next_offset).toEqual(2);
     doc_id = createDocResp.body.data.id;
     token = createDocAttrs.token;
   });
@@ -90,7 +91,10 @@ describe('changes', () => {
         },
       })
       .expect(200);
-    expect(appendResp.body.meta?.changes_added).toEqual(1);
+    expect(appendResp.body.meta).toEqual({
+      changes_added: 1,
+      next_offset: 3,
+    });
   });
 
   it('can request changes to a doc', async () => {
@@ -110,7 +114,10 @@ describe('changes', () => {
         },
       })
       .expect(200);
-    expect(appendResp.body.meta?.changes_added).toEqual(1);
+    expect(appendResp.body.meta).toEqual({
+      changes_added: 1,
+      next_offset: 3,
+    });
 
     // Change offsets start at 1, so there will be 2 changes:
     // - the initial document
@@ -120,6 +127,7 @@ describe('changes', () => {
       .set({authorization: `Bearer ${token}`})
       .expect(200);
     expect(getRespFromBeginning.body.data?.attributes?.changes).toHaveLength(2);
+    expect(getRespFromBeginning.body.data?.attributes?.next_offset).toEqual(3);
 
     // Change offset is inclusive, so starting at 2, we'll get the hello world
     // change only.
@@ -130,6 +138,14 @@ describe('changes', () => {
     expect(getRespWithHelloWorld.body.data?.attributes?.changes).toHaveLength(
       1
     );
+    expect(getRespWithHelloWorld.body.data?.attributes?.next_offset).toEqual(3);
+
+    const getRespNothingYet: supertest.Response = await supertest(app)
+      .get(`/docs/${doc_id}/changes?offset=3`)
+      .set({authorization: `Bearer ${token}`})
+      .expect(200);
+    expect(getRespNothingYet.body.data?.attributes?.changes).toHaveLength(0);
+    expect(getRespNothingYet.body.data?.attributes?.next_offset).toEqual(3);
 
     // Automerge is of course idempotent
     const [updatedDoc] = automerge.applyChanges(

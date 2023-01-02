@@ -16,6 +16,7 @@ declare namespace Components {
         }
         export interface AppendDocChangesResponseMeta {
             changes_added?: number;
+            next_offset?: number;
         }
         export interface ConsumeInviteResponse {
             data: ConsumeInviteResponseData;
@@ -46,13 +47,15 @@ declare namespace Components {
             data: CreateDocResponseData;
             links: SelfLinks;
         }
+        export interface CreateDocResponseAttributes {
+            actor_id?: ActorId /* uuid */;
+            token: string; // byte
+            next_offset?: number;
+        }
         export interface CreateDocResponseData {
             id: ResourceId /* uuid */;
             type: "docs";
-            attributes: {
-                actor_id?: ActorId /* uuid */;
-                token: string; // byte
-            };
+            attributes: CreateDocResponseAttributes;
         }
         export interface CreateInviteRequest {
             data: CreateInviteRequestData;
@@ -95,6 +98,7 @@ declare namespace Components {
         }
         export interface GetDocChangesAttributes {
             changes: string /* byte */[];
+            next_offset?: number;
         }
         export interface GetDocChangesResponse {
             data: GetDocChangesResponseData;
@@ -112,7 +116,7 @@ declare namespace Components {
     }
 }
 declare namespace Paths {
-    namespace AppendDocChanges {
+    namespace AppendChanges {
         namespace Parameters {
             export type DocId = Components.Schemas.ResourceId /* uuid */;
         }
@@ -126,7 +130,7 @@ declare namespace Paths {
             export type $404 = Components.Schemas.ErrorResponse;
         }
     }
-    namespace ConsumeDocInvite {
+    namespace ConsumeInvite {
         namespace Parameters {
             export type ActorId = Components.Schemas.ActorId /* uuid */;
             export type DocId = Components.Schemas.ResourceId /* uuid */;
@@ -150,7 +154,7 @@ declare namespace Paths {
             export type $400 = Components.Schemas.ErrorResponse;
         }
     }
-    namespace CreateDocInvite {
+    namespace CreateInvite {
         namespace Parameters {
             export type DocId = Components.Schemas.ResourceId /* uuid */;
         }
@@ -162,7 +166,7 @@ declare namespace Paths {
             export type $201 = Components.Schemas.CreateInviteResponse;
         }
     }
-    namespace GetDocChanges {
+    namespace GetChanges {
         namespace Parameters {
             export type DocId = Components.Schemas.ResourceId /* uuid */;
             export type Offset = number;

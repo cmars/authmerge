@@ -40,7 +40,7 @@ paths:
 
   /docs/{doc_id}/changes:
     post:
-      operationId: appendDocChanges
+      operationId: appendChanges
       summary: Append document changes
       parameters:
         - name: doc_id
@@ -74,7 +74,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
     get:
-      operationId: getDocChanges
+      operationId: getChanges
       summary: Get document changes
       parameters:
         - name: doc_id
@@ -111,7 +111,7 @@ paths:
 
   /docs/{doc_id}/invites:
     post:
-      operationId: createDocInvite
+      operationId: createInvite
       summary: Create a new invite for a document collaboration
       parameters:
         - name: doc_id
@@ -135,7 +135,7 @@ paths:
 
   /docs/{doc_id}/invites/{invite_id}:
     delete:
-      operationId: consumeDocInvite
+      operationId: consumeInvite
       summary: Consume an invite to collaborate on a document
       parameters:
         - name: doc_id
@@ -225,16 +225,22 @@ components:
           type: string
           enum: ['docs']
         attributes:
-          type: object
-          required:
-            - token
-          properties:
-            actor_id:
-              $ref: '#/components/schemas/ActorId'
-            token:
-              type: string
-              format: byte
+          $ref: '#/components/schemas/CreateDocResponseAttributes'
+    CreateDocResponseAttributes:
+      type: object
+      required:
+        - token
+      properties:
+        actor_id:
+          $ref: '#/components/schemas/ActorId'
+        token:
+          type: string
+          format: byte
+        next_offset:
+          type: number
+          minimum: 0
 
+    # Appending document changes
     AppendDocChangesRequest:
       type: object
       required: [data]
@@ -271,7 +277,11 @@ components:
         changes_added:
           type: number
           minimum: 0
+        next_offset:
+          type: number
+          minimum: 0
 
+    # Getting document changes
     GetDocChangesResponse:
       type: object
       required: [data, links]
@@ -298,7 +308,11 @@ components:
           items:
             type: string
             format: byte
+        next_offset:
+          type: number
+          minimum: 0
 
+    # Creating invites to collaborate on a document
     CreateInviteRequest:
       type: object
       required: [data]
@@ -362,6 +376,7 @@ components:
         uses_remaining:
           type: number
 
+    # Using an invite
     ConsumeInviteResponse:
       type: object
       required: [data, links]
@@ -397,6 +412,7 @@ components:
           type: number
           minimum: 1
 
+    # JSON API errors
     ErrorResponse:
       type: object
       required:

@@ -71,6 +71,7 @@ describe('create doc collaboration', () => {
           type: 'docs',
           attributes: expect.objectContaining({
             actor_id,
+            next_offset: 2,
           }),
         }),
       })

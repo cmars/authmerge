@@ -14,14 +14,19 @@ export interface Storage {
     doc_id: string,
     actor_id: string,
     changes: Buffer[]
-  ): Promise<void>;
+  ): Promise<{nextOffset: number}>;
 
-  getChanges(doc_id: string, offset: number): Promise<{changes: Buffer[]}>;
+  getChanges(
+    doc_id: string,
+    offset: number
+  ): Promise<{changes: Buffer[]; nextOffset: number}>;
 
-  createDoc(params: {
+  createDoc(params: {actor_id: string; changes: Buffer[]}): Promise<{
+    doc_id: string;
     actor_id: string;
-    changes: Buffer[];
-  }): Promise<{doc_id: string; actor_id: string; token: string}>;
+    token: string;
+    nextOffset: number;
+  }>;
 
   createInvite(
     doc_id: string,
@@ -74,8 +79,8 @@ export class SqliteStorage implements Storage {
     doc_id: string,
     actor_id: string,
     changes: Buffer[]
-  ): Promise<void> {
-    await this.db.transaction(async tx => {
+  ): Promise<{nextOffset: number}> {
+    return await this.db.transaction(async tx => {
       await tx('changes').insert(
         changes.map(change => {
           return {
@@ -85,24 +90,41 @@ export class SqliteStorage implements Storage {
           };
         })
       );
+      const maxOffsetRow = await tx('changes')
+        .max('offset', {as: 'maxOffset'})
+        .where({doc_id})
+        .first();
+      return {nextOffset: (maxOffsetRow?.maxOffset ?? 0) + 1};
     });
   }
 
   public async getChanges(
     doc_id: string,
     offset: number
-  ): Promise<{changes: Buffer[]}> {
-    const rows = await this.db('changes')
-      .select('change')
-      .where({doc_id})
-      .where('offset', '>=', offset);
-    return {changes: rows.map(row => row.change)};
+  ): Promise<{changes: Buffer[]; nextOffset: number}> {
+    return await this.db.transaction(async tx => {
+      const changeRows = await tx('changes')
+        .select('change')
+        .where({doc_id})
+        .where('offset', '>=', offset);
+      const changes = changeRows.map(row => row.change);
+      const maxOffsetRow = await tx('changes')
+        .max('offset', {as: 'maxOffset'})
+        .where({doc_id})
+        .first();
+      return {changes, nextOffset: (maxOffsetRow?.maxOffset ?? 0) + 1};
+    });
   }
 
   public async createDoc(params: {
     actor_id: string;
     changes: Buffer[];
-  }): Promise<{doc_id: string; actor_id: string; token: string}> {
+  }): Promise<{
+    doc_id: string;
+    actor_id: string;
+    token: string;
+    nextOffset: number;
+  }> {
     const docRow = {
       doc_id: v4(),
     };
@@ -120,16 +142,21 @@ export class SqliteStorage implements Storage {
         created_at: new Date().toISOString(),
       };
     });
-    await this.db.transaction(async tx => {
+    return await this.db.transaction(async tx => {
       await tx('docs').insert(docRow);
       await tx('actors').insert(actorRow);
       await tx('changes').insert(changeRows);
+      const maxOffsetRow = await tx('changes')
+        .max('offset', {as: 'maxOffset'})
+        .where({doc_id: docRow.doc_id})
+        .first();
+      return {
+        doc_id: docRow.doc_id,
+        actor_id: actorRow.actor_id,
+        token: actorRow.token,
+        nextOffset: (maxOffsetRow?.maxOffset ?? 0) + 1,
+      };
     });
-    return {
-      doc_id: docRow.doc_id,
-      actor_id: actorRow.actor_id,
-      token: actorRow.token,
-    };
   }
 
   public async createInvite(

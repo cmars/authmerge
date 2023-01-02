@@ -54,7 +54,7 @@ export class Controller {
     if (body.data.type !== 'docs') {
       throw new BadRequestError(`invalid resource type '${body.data.type}'`);
     }
-    const {doc_id, token, actor_id} = await this.storage.createDoc({
+    const {doc_id, token, actor_id, nextOffset} = await this.storage.createDoc({
       actor_id: body.data.attributes.actor_id,
       changes: body.data.attributes.changes.map(ch =>
         Buffer.from(ch, 'base64')
@@ -67,6 +67,7 @@ export class Controller {
         attributes: {
           token: token,
           actor_id: actor_id,
+          next_offset: nextOffset,
         },
       },
       links: {
@@ -80,7 +81,7 @@ export class Controller {
     body: Components.Schemas.AppendDocChangesRequest
   ): Promise<Components.Schemas.AppendDocChangesResponse> {
     const changesAdded = body.data.attributes.changes.length;
-    await this.storage.appendChanges(
+    const {nextOffset} = await this.storage.appendChanges(
       ctx.doc_id,
       ctx.actor_id,
       body.data.attributes.changes.map(ch => Buffer.from(ch, 'base64'))
@@ -88,6 +89,7 @@ export class Controller {
     return {
       meta: {
         changes_added: changesAdded,
+        next_offset: nextOffset,
       },
     };
   }
@@ -96,12 +98,16 @@ export class Controller {
     ctx: AuthenticatedContext,
     offset: number
   ): Promise<Components.Schemas.GetDocChangesResponse> {
-    const {changes} = await this.storage.getChanges(ctx.doc_id, offset);
+    const {changes, nextOffset} = await this.storage.getChanges(
+      ctx.doc_id,
+      offset
+    );
     return {
       data: {
         type: 'changes',
         attributes: {
           changes: changes.map(ch => Buffer.of(...ch).toString('base64')),
+          next_offset: nextOffset,
         },
       },
       links: {
