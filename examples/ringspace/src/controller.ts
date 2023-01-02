@@ -29,17 +29,20 @@ export class Controller {
     }
     const authToken = match[1];
     try {
-      const actorId = await this.storage.getActorIdForToken(authToken);
-      if (actorId) {
-        result.actor_id = actorId;
+      const authActor = await this.storage.getActorIdForToken(authToken);
+      if (authActor?.actor_id && authActor.doc_id === result.doc_id) {
+        result.actor_id = authActor.actor_id;
       } else {
         throw new ForbiddenError();
       }
-    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
       if (err instanceof ForbiddenError) {
         throw err;
       }
-      console.log(err);
+      if (err?.trace) {
+        console.log(err.trace);
+      }
       throw new ServerError();
     }
     return result;
@@ -85,6 +88,24 @@ export class Controller {
     return {
       meta: {
         changes_added: changesAdded,
+      },
+    };
+  }
+
+  public async getChanges(
+    ctx: AuthenticatedContext,
+    offset: number
+  ): Promise<Components.Schemas.GetDocChangesResponse> {
+    const {changes} = await this.storage.getChanges(ctx.doc_id, offset);
+    return {
+      data: {
+        type: 'changes',
+        attributes: {
+          changes: changes.map(ch => Buffer.of(...ch).toString('base64')),
+        },
+      },
+      links: {
+        self: `/docs/${ctx.doc_id}/changes?offset=${offset}`,
       },
     };
   }

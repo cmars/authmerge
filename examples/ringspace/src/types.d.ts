@@ -93,6 +93,17 @@ declare namespace Components {
         export interface ErrorResponse {
             errors: Error[];
         }
+        export interface GetDocChangesAttributes {
+            changes: string /* byte */[];
+        }
+        export interface GetDocChangesResponse {
+            data: GetDocChangesResponseData;
+            links: SelfLinks;
+        }
+        export interface GetDocChangesResponseData {
+            type: "changes";
+            attributes: GetDocChangesAttributes;
+        }
         export type Link = string; // uri
         export type ResourceId = string; // uuid
         export interface SelfLinks {
@@ -163,6 +174,7 @@ declare namespace Paths {
             offset: Parameters.Offset;
         }
         namespace Responses {
+            export type $200 = Components.Schemas.GetDocChangesResponse;
             export type $400 = Components.Schemas.ErrorResponse;
             export type $404 = Components.Schemas.ErrorResponse;
         }

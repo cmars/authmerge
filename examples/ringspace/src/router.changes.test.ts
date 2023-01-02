@@ -13,7 +13,7 @@ import {router} from './router';
 import {SqliteStorage} from './storage';
 import {toAutomerge} from './actors';
 
-describe('append changes', () => {
+describe('changes', () => {
   let app: express.Application;
   let server: http.Server;
   let storage: SqliteStorage;
@@ -91,6 +91,54 @@ describe('append changes', () => {
       })
       .expect(200);
     expect(appendResp.body.meta?.changes_added).toEqual(1);
+  });
+
+  it('can request changes to a doc', async () => {
+    const newDoc = automerge.change(doc, (modifyDoc: any) => {
+      modifyDoc.hello = 'world';
+    });
+    const changes = automerge.getChanges(doc, newDoc);
+    const appendResp: supertest.Response = await supertest(app)
+      .post(`/docs/${doc_id}/changes`)
+      .set({authorization: `Bearer ${token}`})
+      .send({
+        data: {
+          type: 'changes',
+          attributes: {
+            changes: changes.map(ch => Buffer.of(...ch).toString('base64')),
+          },
+        },
+      })
+      .expect(200);
+    expect(appendResp.body.meta?.changes_added).toEqual(1);
+
+    // Change offsets start at 1, so there will be 2 changes:
+    // - the initial document
+    // - the hello world change above
+    const getRespFromBeginning: supertest.Response = await supertest(app)
+      .get(`/docs/${doc_id}/changes?offset=0`)
+      .set({authorization: `Bearer ${token}`})
+      .expect(200);
+    expect(getRespFromBeginning.body.data?.attributes?.changes).toHaveLength(2);
+
+    // Change offset is inclusive, so starting at 2, we'll get the hello world
+    // change only.
+    const getRespWithHelloWorld: supertest.Response = await supertest(app)
+      .get(`/docs/${doc_id}/changes?offset=2`)
+      .set({authorization: `Bearer ${token}`})
+      .expect(200);
+    expect(getRespWithHelloWorld.body.data?.attributes?.changes).toHaveLength(
+      1
+    );
+
+    // Automerge is of course idempotent
+    const [updatedDoc] = automerge.applyChanges(
+      newDoc,
+      getRespFromBeginning.body.data.attributes.changes.map((ch: string) =>
+        Buffer.from(ch, 'base64')
+      )
+    );
+    expect(updatedDoc).toEqual(newDoc);
   });
 
   it('responds 401 when missing authorization', async () => {

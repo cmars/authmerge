@@ -93,7 +93,9 @@ paths:
         '200':
           description: The requested document changes
           content:
-            application/octet-stream: {}
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/GetDocChangesResponse'
         '400':
           description: There was a problem with the request
           content:
@@ -269,6 +271,33 @@ components:
         changes_added:
           type: number
           minimum: 0
+
+    GetDocChangesResponse:
+      type: object
+      required: [data, links]
+      properties:
+        data:
+          $ref: '#/components/schemas/GetDocChangesResponseData'
+        links:
+          $ref: '#/components/schemas/SelfLinks'
+    GetDocChangesResponseData:
+      type: object
+      required: [id, type, attributes]
+      properties:
+        type:
+          type: string
+          enum: ['changes']
+        attributes:
+          $ref: '#/components/schemas/GetDocChangesAttributes'
+    GetDocChangesAttributes:
+      type: object
+      required: [changes]
+      properties:
+        changes:
+          type: array
+          items:
+            type: string
+            format: byte
 
     CreateInviteRequest:
       type: object

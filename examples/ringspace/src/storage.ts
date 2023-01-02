@@ -6,13 +6,17 @@ import {v4} from 'uuid';
 import {NotFoundError} from './errors';
 
 export interface Storage {
-  getActorIdForToken(authToken: string): Promise<string | null>;
+  getActorIdForToken(
+    authToken: string
+  ): Promise<{doc_id: string; actor_id: string} | null>;
 
   appendChanges(
     doc_id: string,
     actor_id: string,
     changes: Buffer[]
   ): Promise<void>;
+
+  getChanges(doc_id: string, offset: number): Promise<{changes: Buffer[]}>;
 
   createDoc(params: {
     actor_id: string;
@@ -53,15 +57,17 @@ export class SqliteStorage implements Storage {
     this.db = db;
   }
 
-  public async getActorIdForToken(authToken: string): Promise<string | null> {
-    const actor = await this.db<{actor_id: string; token: string}>('actors')
-      .select('actor_id')
+  public async getActorIdForToken(
+    authToken: string
+  ): Promise<{doc_id: string; actor_id: string} | null> {
+    const row = await this.db<{actor_id: string; token: string}>('actors')
+      .select('doc_id', 'actor_id')
       .where({token: authToken})
       .first();
-    if (!actor) {
+    if (!row) {
       return null;
     }
-    return actor.actor_id;
+    return {doc_id: row.doc_id, actor_id: row.actor_id};
   }
 
   public async appendChanges(
@@ -80,6 +86,17 @@ export class SqliteStorage implements Storage {
         })
       );
     });
+  }
+
+  public async getChanges(
+    doc_id: string,
+    offset: number
+  ): Promise<{changes: Buffer[]}> {
+    const rows = await this.db('changes')
+      .select('change')
+      .where({doc_id})
+      .where('offset', '>=', offset);
+    return {changes: rows.map(row => row.change)};
   }
 
   public async createDoc(params: {

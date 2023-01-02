@@ -2,6 +2,7 @@ import * as express from 'express';
 
 import {Controller} from './controller';
 import {
+  BadRequestError,
   JsonApiError,
   NotFoundError,
   ServerError,
@@ -57,6 +58,36 @@ export const router = (controller: Controller): express.IRouter => {
             actor_id: req.context.actor_id!,
           },
           req.body as Components.Schemas.AppendDocChangesRequest
+        );
+        res.status(200).send(respBody);
+      } catch (err) {
+        next(err);
+      }
+    },
+  ]);
+
+  r.get('/docs/:doc_id/changes', [
+    reqContext(controller),
+    requireAuth,
+    async (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      try {
+        if (!req.context?.actor_id) {
+          throw new UnauthorizedError();
+        }
+        if (!req.query.offset) {
+          throw new BadRequestError();
+        }
+        const offset = parseInt(req.query.offset.toString());
+        const respBody = await controller.getChanges(
+          {
+            ...req.context,
+            actor_id: req.context.actor_id!,
+          },
+          offset
         );
         res.status(200).send(respBody);
       } catch (err) {
