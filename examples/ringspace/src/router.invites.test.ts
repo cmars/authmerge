@@ -170,4 +170,54 @@ describe('create invites', () => {
       })
       .expect(403);
   });
+
+  it('responds 403 when authorization does not match the requested doc', async () => {
+    // Create other doc with same actor ID, establishing a different token.
+    // While we could make actor ID globally unique, it might be useful not to.
+    // Why?  We might have the same bunch of actors working on different docs
+    // with different permissions. Case in point: giftpool, where N docs are
+    // created for N actors, each of whom is the subject of the doc, but can't
+    // read the other actors' interactions of who is gifting what.
+    doc = automerge.from(
+      {
+        somethingCompletelyDifferent: {
+          fresh: 'fruit',
+          rotting: 'vegetables',
+        },
+      },
+      toAutomerge(adminActorId)
+    );
+    const changes = automerge
+      .getAllChanges(doc)
+      .map(arr => Buffer.of(...arr).toString('base64'));
+    const otherDocResp = await supertest(app)
+      .post('/docs')
+      .send({
+        data: {
+          type: 'docs',
+          attributes: {
+            actor_id: adminActorId,
+            changes: changes,
+          },
+        },
+      })
+      .expect(201);
+    const otherDocToken = otherDocResp.body?.data?.attributes?.token;
+    expect(otherDocToken).toBeTruthy();
+
+    // Try to create an invite to the original doc (not otherDoc) with the otherDoc's token
+    await supertest(app)
+      .post(`/docs/${doc_id}/invites`)
+      .set({authorization: `Bearer ${otherDocToken}`})
+      .send({
+        data: {
+          type: 'invites',
+          attributes: {
+            note: 'join the party',
+            roles: ['writer'],
+          },
+        },
+      })
+      .expect(403);
+  });
 });
